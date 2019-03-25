@@ -1,5 +1,5 @@
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.0)
 
-project (Demo)
+project (EarthS)
 
-add_executable (Demo main.cc)
+add_executable (earth_server main.cc)
