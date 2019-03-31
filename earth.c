@@ -111,7 +111,7 @@ void do_accept(evutil_socket_t listener, short event, void *arg) {
     if (fd<0) {
         perror("accept");
     }
-    else if (fd>__DARWIN_FD_SETSIZE) {
+    else if (fd>FD_SETSIZE) {
         close(fd);
     }
     else {
