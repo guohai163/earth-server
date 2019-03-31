@@ -64,11 +64,11 @@ void free_fd_state(struct fd_state *state) {
 void do_read(evutil_socket_t fd, short events, void *arg) {
     struct fd_state *state = arg;
     ssize_t result;
-    int i;
     char buf[MAX_LINE];
     
     while (1) {
         result = recv(fd, buf, sizeof(buf), 0);
+        printf("recv string : %s", buf);
         if (result <=0)
             break;
         strcpy(state->buffer, cmd_exec(buf, result));
@@ -100,10 +100,28 @@ void do_write(evutil_socket_t fd, short events, void *arg) {
     event_del(state->write_event);
 }
 
+void readcb(struct bufferevent *bev, void *ctx) {
+    struct evbuffer *input, *output;
+    char *line;
+    size_t n;
+    
+    input = bufferevent_get_input(bev);
+    output = bufferevent_get_output(bev);
+    
+    while ((line = evbuffer_readln(input, &n, EVBUFFER_EOL_LF))) {
+        
+    }
+}
+
+void errorcb(struct bufferevent *bev, short error, void *ctx) {
+    bufferevent_free(bev);
+}
+
 /*
  * 接收新请求
  */
 void do_accept(evutil_socket_t listener, short event, void *arg) {
+    printf("wait accept new conn...\n");
     struct event_base *base = arg;
     struct sockaddr_storage ss;
     socklen_t slen = sizeof(ss);
@@ -117,6 +135,11 @@ void do_accept(evutil_socket_t listener, short event, void *arg) {
     else {
         struct fd_state *state;
         evutil_make_socket_nonblocking(fd);
+        
+        struct bufferevent *bev;
+        bev = bufferevent_socket_new(base, fd, BEV_OPT_CLOSE_ON_FREE);
+        state = alloc_fd_state(base, fd);
+        event_add(state->read_event, NULL);
     }
 }
 
@@ -141,7 +164,7 @@ void run(void) {
         return;
     }
     
-    if (listen(listener, 10)<0) {
+    if (listen(listener, 2)<0) {
         perror("listen");
         return;
     }
