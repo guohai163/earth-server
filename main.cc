@@ -18,11 +18,41 @@
 #define IS_TCP(x) (x == tcp_transport)
 #define IS_UDP(x) (x == udp_transport)
 
+
+// 存储连接信息结构秒
+struct conn {
+    int sfd;
+};
+
+
 enum network_transport {
     local_transport, /* Unix sockets*/
     tcp_transport,
     udp_transport
 };
+
+/**
+ * Possible states of a connection.
+ */
+enum conn_states {
+    conn_listening,  /**< the socket which listens for connections */
+    conn_new_cmd,    /**< Prepare connection for next command */
+    conn_waiting,    /**< waiting for a readable socket */
+    conn_read,       /**< reading in a command line */
+    conn_parse_cmd,  /**< try to parse a command from the input buffer */
+    conn_write,      /**< writing out a simple response */
+    conn_nread,      /**< reading in a fixed number of bytes */
+    conn_swallow,    /**< swallowing unnecessary bytes w/o storing */
+    conn_closing,    /**< closing this connection */
+    conn_mwrite,     /**< writing out many items sequentially */
+    conn_closed,     /**< connection is closed */
+    conn_watch,      /**< held by the logger thread as a watcher */
+    conn_max_state   /**< Max state value (used for assertion) */
+};
+
+/** file scope variables **/
+static conn *listen_conn = NULL;
+conn **conns;
 
 void sigchld_handler(int s)
 {
@@ -36,6 +66,20 @@ void *get_in_addr(struct sockaddr *sa)
         return &(((struct sockaddr_in*)sa)->sin_addr);
     }
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
+
+conn *conn_new(const int sfd) {
+    conn *c;
+    c = conns[sfd];
+    if (NULL == c) {
+        if (!(c = (conn *)calloc(1, sizeof(conn)))){
+            fprintf(stderr, "Failed to allocate connection object\n");
+            return NULL;
+        }
+        c->sfd = sfd;
+        conns[sfd] = c;
+    }
+    return c;
 }
 
 /*
@@ -78,6 +122,7 @@ static int server_socket(const char *interface,
     char port_buf[NI_MAXSERV];
     int success = 0;
     int flags =1;
+    // 写死使用TCP方法
     struct addrinfo hints = { .ai_flags = AI_PASSIVE,
                               .ai_family = AF_UNSPEC,
                               .ai_socktype = SOCK_STREAM };
@@ -98,6 +143,7 @@ static int server_socket(const char *interface,
     }
     // 遍历每一个socket对象
     for (next = ai; next; next = next->ai_next) {
+        conn *listen_conn_add;
         if ((sfd = new_socket(next)) == -1) {
             continue;
         }
@@ -119,20 +165,73 @@ static int server_socket(const char *interface,
         }
         
         // 开始进行绑定
+        if (bind(sfd, next->ai_addr, next->ai_addrlen) == -1) {
+            // 绑定失败准备退出本次循环
+            if (errno != EADDRINUSE ) {
+                // 地址被使用，退出程序
+                perror("bind");
+                close(sfd);
+                freeaddrinfo(ai);
+                return 1;
+            }
+            close(sfd);
+            continue;
+        }
+        else {
+            success++;
+            if (IS_TCP(transport) && listen(sfd, BACKLOG) == -1) {
+                perror("listen");
+                close(sfd);
+                freeaddrinfo(ai);
+                return 1;
+            }
+            if (portnumber_file != NULL &&
+                (next->ai_addr->sa_family == AF_INET ||
+                 next->ai_addr->sa_family == AF_INET6)) {
+                    union {
+                        struct sockaddr_in in;
+                        struct sockaddr_in6 in6;
+                    } my_sockaddr;
+                    socklen_t len = sizeof(my_sockaddr);
+                    if (getsockname(sfd, (struct sockaddr*)&my_sockaddr, &len)==0) {
+                        // 返回套接字详情，并写文件
+                        if (next->ai_addr->sa_family == AF_INET) {
+                            fprintf(portnumber_file, "%s INET: %u\n",
+                                    IS_UDP(transport) ? "UDP" : "TCP",
+                                    ntohs(my_sockaddr.in.sin_port));
+                        } else {
+                            fprintf(portnumber_file, "%s INET6: %u\n",
+                                    IS_UDP(transport) ? "UDP" : "TCP",
+                                    ntohs(my_sockaddr.in6.sin6_port));
+                        }
+                    }
+                }
+        }
+        
+        if (IS_TCP(transport)) {
+            // 将创建的连接进行存储
+            listen_conn_add = conn_new(sfd);
+        }
     }
     
     freeaddrinfo(ai);
     return success == 0;
 }
 
-int main(int argc, char *argv[]) {
+
+static int server_sockets(int port, enum network_transport transport,
+                          FILE *portnumber_file) {
+    return server_socket(NULL, port, transport, portnumber_file);
+}
+
+int main1(int argc, char *argv[]) {
     struct sockaddr_storage their_addr;
     socklen_t addr_size;
     struct addrinfo hints, *res, *p;
     int sockfd, new_fd;
     struct sigaction sa;
     int status;
-    char ipstr[INET6_ADDRSTRLEN];
+    
     char *msg = "Hello !";
     int yes=1;
     
@@ -188,6 +287,9 @@ int main(int argc, char *argv[]) {
             perror("accept");
             continue;
         }
+        
+        // 将接收到的l请求来源IP转换为表达式，并进行输出
+        char ipstr[INET6_ADDRSTRLEN];
         inet_ntop(their_addr.ss_family,
                   get_in_addr((struct sockaddr *)&their_addr),
                   ipstr, sizeof ipstr);
