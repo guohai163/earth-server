@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 /* For fcntl */
 #include <fcntl.h>
+#include <set>
 
 #include <event2/event.h>
 #include <event2/buffer.h>
@@ -40,6 +41,7 @@
 #include "s2/s2region_coverer.h"
 #include "s2/s2cap.h"
 #include "util.h"
+
 
 void do_read(evutil_socket_t fd, short events, void *arg);
 void do_write(evutil_socket_t fd, short events, void *arg);

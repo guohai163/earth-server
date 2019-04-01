@@ -15,7 +15,12 @@
 
 
 // 全局变量，存储坐标
-S2PointIndex<string> earthIndex;
+using Index = S2PointIndex<string>;
+using PointData = Index::PointData;
+using Contents = std::multiset<PointData>;
+
+Index earthIndex;
+Contents earthContents;
 
 typedef struct token_s {
     char *value;
@@ -29,9 +34,23 @@ static inline void process_set_command(struct evbuffer *output, token_t *tokens)
     if (!(safe_strtod(tokens[2].value, &lat_degrees)
           && safe_strtod(tokens[3].value, &lng_degrees))) {
         evbuffer_add(output, "bad command\n", strlen("bad command\n"));
+        return;
     }
-    evbuffer_add(output, "process_set_command\n", strlen("process_set_command\n"));
+    earthIndex.Add(S2LatLng::FromDegrees(lat_degrees, lng_degrees).ToPoint(),tokens[1].value);
+
+    evbuffer_add(output, "SUCCESS\n", strlen("SUCCESS\n"));
     
+}
+
+static inline void process_get_command(struct evbuffer *output, token_t *tokens) {
+    double lat_degrees, lng_degrees;
+    int points = earthIndex.num_points();
+    char outLine[MAX_LINE];
+    sprintf(outLine, "%d \n\0",points);
+    
+    
+    
+    evbuffer_add(output, outLine, strlen(outLine));
 }
 
 /**
@@ -84,9 +103,10 @@ int process_command(struct evbuffer *output, char *command) {
     
     printf("command is:%s, command length:%zu\n",tokens[0].value,ntokens);
     
-    if (strncmp(command, "get ", 4) == 0) {
+    if ( ntokens == 3 && strcmp(tokens[COMMAND_TOKEN].value, "get") == 0) {
         
         printf("input get comand %zu\n",ntokens);
+        process_get_command(output, tokens);
     }
     else if ( ntokens==5 && strcmp(tokens[COMMAND_TOKEN].value, "set") == 0) {
         printf("input set command %zu\n",ntokens);
@@ -106,80 +126,6 @@ struct fd_state {
     struct event *write_event;
 };
 
-/*
- * 申请新的内存
- */
-//struct fd_state * alloc_fd_state(struct event_base *base, evutil_socket_t fd) {
-//    struct fd_state *state = malloc(sizeof(struct fd_state));
-//    if (!state)
-//        return NULL;
-//
-//    state->read_event = event_new(base, fd, EV_READ|EV_PERSIST, do_read, state);
-//    if (!state->read_event) {
-//        free(state);
-//        return NULL;
-//    }
-//
-//    state->write_event = event_new(base, fd, EV_WRITE|EV_PERSIST, do_write, state);
-//    if (!state->write_event) {
-//        free(state);
-//        return NULL;
-//    }
-//
-//    state->buffer_used = state->n_written = state->write_upto = 0;
-//
-//    assert(state->write_event);
-//
-//    return state;
-//}
-
-///*
-// * free state struct
-// */
-//void free_fd_state(struct fd_state *state) {
-//    event_free(state->read_event);
-//    event_free(state->write_event);
-//    free(state);
-//}
-
-//void do_read(evutil_socket_t fd, short events, void *arg) {
-//    struct fd_state *state = (fd_state *)arg;
-//    ssize_t result;
-//    char buf[MAX_LINE];
-//
-//    while (1) {
-//        result = recv(fd, buf, sizeof(buf), 0);
-//        printf("recv string : %s", buf);
-//        if (result <=0)
-//            break;
-//        strcpy(state->buffer, cmd_exec(buf, result));
-//        event_add(state->write_event, NULL);
-//    }
-//
-//    if (result ==0) {
-//        free_fd_state(state);
-//    }
-//    else if (result<0) {
-//        if (errno == EAGAIN)
-//            return;
-//        perror("revc");
-//        free_fd_state(state);
-//    }
-//}
-//
-//void do_write(evutil_socket_t fd, short events, void *arg) {
-//    struct fd_state *state = (fd_state *)arg;
-//    printf("wait send :%s", state->buffer);
-//    ssize_t result = send(fd, state->buffer, sizeof(state->buffer), 0);
-//
-//    if (result <0) {
-//        if (errno == EAGAIN)
-//            return;
-//        free_fd_state(state);
-//        return;
-//    }
-//    event_del(state->write_event);
-//}
 
 void readcb(struct bufferevent *bev, void *ctx) {
     struct evbuffer *input, *output;
@@ -218,7 +164,7 @@ void do_accept(evutil_socket_t listener, short event, void *arg) {
         close(fd);
     }
     else {
-        struct fd_state *state;
+//        struct fd_state *state;
         evutil_make_socket_nonblocking(fd);
         
         struct bufferevent *bev;
