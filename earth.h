@@ -21,11 +21,28 @@
 
 #include <assert.h>
 #include <unistd.h>
-#include <string.h>
+#include <string>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+
+
+#include "s2/base/commandlineflags.h"
+#include "s2/s2earth.h"
+#include "s2/s1chord_angle.h"
+#include "s2/s2closest_point_query.h"
+#include "s2/s2point_index.h"
+#include "s2/s2point.h"
+#include "s2/s2cell_id.h"
+
+
+#include "s2/s2cell_union.h"
+#include "s2/s2region_coverer.h"
+#include "s2/s2cap.h"
+#include "util.h"
+
 void do_read(evutil_socket_t fd, short events, void *arg);
 void do_write(evutil_socket_t fd, short events, void *arg);
+
 
 #endif /* earth_h */
