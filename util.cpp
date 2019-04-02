@@ -8,8 +8,10 @@
 #include "util.h"
 #include <assert.h>
 #include <ctype.h>
+#include <errno.h>
 
 #define xisspace(c) isspace((unsigned char)c)
+
 
 bool safe_strtod(const char *str, double *out) {
     printf("double %s", str);
@@ -25,3 +27,15 @@ bool safe_strtod(const char *str, double *out) {
     return false;
 }
 
+bool safe_strtoul(const char *str, uint32_t *out) {
+    unsigned long l =0;
+    char *endptr = NULL;
+    *out = 0;
+    errno = 0;
+    
+    l = strtoul(str, &endptr, 10);
+    if ((errno == ERANGE) || (str == endptr)) {
+        return false;
+    }
+    return false;
+}

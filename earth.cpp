@@ -46,11 +46,14 @@ static inline void process_get_command(struct evbuffer *output, token_t *tokens)
     double lat_degrees, lng_degrees;
     int points = earthIndex.num_points();
     char outLine[MAX_LINE];
-    sprintf(outLine, "%d \n\0",points);
-    
-    
+    sprintf(outLine, "%d \n",points);
     
     evbuffer_add(output, outLine, strlen(outLine));
+}
+
+// 搜索指定条件的数据
+static inline void process_search_command(struct evbuffer *output, token_t *tokens) {
+    
 }
 
 /**

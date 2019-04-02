@@ -1,4 +1,16 @@
-### 命令
+# 编译
+
+~~~
+git clone https://github.com/guohai163/earth-library.git
+cd earth-library
+mkdir build
+cd build
+cmake ..
+make
+./earth-library
+~~~
+
+# 命令
 * set
 
     set <key> 33.462 112.333\r\n
@@ -16,5 +28,6 @@
     delete <key>\r\n
 
 
-### 参考###
-* [Beej's Guide to Network Programming 简体中文版](http://beej-cn.netdpi.net/)
+# 参考
+* [Beej's Guide to Network Programming](http://beej.us/guide/bgnet/)
+* [Unix Network Programming](http://www.unpbook.com/)
