@@ -1,3 +1,10 @@
+# 介绍
+
+earth-server是一个基于谷歌S2类库实现的，地球经纬度算法数据库。目前支持如下功能：
+
+1. 向数据库中增加、删除对象
+2. 搜索指定位置最近的若干个坐标标识。
+
 # 编译
 
 ~~~
@@ -11,27 +18,22 @@ make
 ~~~
 
 # 命令
-* set
+* set存储一个坐标点
 
 ~~~ html
-    set <key> 33.462 112.333\r\n
+    set <key> <Latitude> <Longitude>\r\n
 ~~~
     
-* get
+* search搜索某一位置最近N个节点
 
 ~~~ html
-    get <key>\r\n
-~~~
-* search
-
-~~~ html
-    search 33.462 112.333 1500\r\n
+    search <Latitude> <Longitude> <queryNumber>\r\n
 ~~~
     
-* delete
+* delete删除一个坐标点
 
 ~~~ html
-    delete <key>\r\n
+    delete <key> <Latitude> <Longitude>\r\n
 ~~~
 
 # 参考
