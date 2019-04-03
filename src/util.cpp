@@ -3,7 +3,7 @@
 //  earth_server
 //
 //  Created by 郭海 on 2019/4/1.
-//
+//  website http://earth.guohai.org
 
 #include "util.h"
 
@@ -11,6 +11,13 @@
 #define xisspace(c) isspace((unsigned char)c)
 
 
+/**
+ 字符串转换为双精度类型
+
+ @param str <#str description#>
+ @param out <#out description#>
+ @return <#return value description#>
+ */
 bool safe_strtod(const char *str, double *out) {
 
     assert(out != NULL);

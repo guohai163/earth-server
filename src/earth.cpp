@@ -3,7 +3,7 @@
 //  earth_server
 //
 //  Created by 郭海 on 2019/3/31.
-//
+//  website http://earth.guohai.org
 
 #include "earth.h"
 
@@ -13,14 +13,17 @@
 // 命令的位置
 #define COMMAND_TOKEN 0
 
+#define PROCESS_NAME "earth_server"
+#define VERSION "1.0a"
+
 
 // 全局变量，存储坐标
 using Index = S2PointIndex<string>;
 using PointData = Index::PointData;
-using Contents = std::multiset<PointData>;
+
 
 Index earthIndex;
-Contents earthContents;
+
 
 typedef struct token_s {
     char *value;
@@ -50,6 +53,14 @@ static inline void process_add_command(struct evbuffer *output, token_t *tokens)
     
 }
 
+/**
+ 将内存中数据持久化，暂未实现
+
+ @param output <#output description#>
+ */
+static void process_save_command(struct evbuffer *output) {
+    
+}
 
 /**
  搜索距离坐标最近的N个结果，示例：search 33.462 112.333 10\r\n
@@ -85,7 +96,7 @@ static inline void process_get_command(struct evbuffer *output, token_t *tokens)
     
     
     for (size_t i = 0;i<result_vec.size();i++) {
-        evbuffer_add(output, result_vec[i].data().c_str(), sizeof(result_vec[i].data().c_str()));
+        evbuffer_add(output, result_vec[i].data().c_str(), strlen(result_vec[i].data().c_str()));
         if (i != result_vec.size()-1) {
             evbuffer_add(output, " ", sizeof(" "));
         }
@@ -211,19 +222,19 @@ int process_command(struct evbuffer *output, char *command) {
     
     ntokens = get_command(command, tokens);
     
-    printf("command is:%s, command length:%zu\n",tokens[0].value,ntokens);
+    syslog(LOG_INFO, "command is:%s, command length:%zu\n",tokens[0].value,ntokens);
     
     if ( ntokens == 5 && strcmp(tokens[COMMAND_TOKEN].value, "get") == 0) {
         
-        printf("input get comand %zu\n",ntokens);
+        syslog(LOG_INFO, "input get comand %zu\n",ntokens);
         process_get_command(output, tokens);
     }
     else if ( ntokens==5 && strcmp(tokens[COMMAND_TOKEN].value, "add") == 0) {
-        printf("input set command %zu\n",ntokens);
+        syslog(LOG_INFO, "input add command %zu\n",ntokens);
         process_add_command(output, tokens);
     }
     else if ( ntokens == 5 && strcmp(tokens[COMMAND_TOKEN].value, "search") == 0) {
-        printf("intpu search command \n");
+        syslog(LOG_INFO, "intpu search command \n");
         process_search_command(output, tokens);
     }
     else if ( ntokens == 5 && strcmp(tokens[COMMAND_TOKEN].value, "delete") == 0) {
@@ -256,10 +267,8 @@ void readcb(struct bufferevent *bev, void *ctx) {
     output = bufferevent_get_output(bev);
     
     while ((line = evbuffer_readln(input, &n, EVBUFFER_EOL_LF))) {
-//        printf("recv line:%s\n",line);
+
         process_command(output, line);
-//        evbuffer_add(output, line, n);
-//        evbuffer_add(output, "\n", 1);
         free(line);
     }
 }
@@ -277,7 +286,7 @@ void errorcb(struct bufferevent *bev, short error, void *ctx) {
  @param arg
  */
 void do_accept(evutil_socket_t listener, short event, void *arg) {
-    printf("wait accept new conn...\n");
+    syslog(LOG_INFO, "input new conn.\n");
     struct event_base *base = (event_base*)arg;
     struct sockaddr_storage ss;
     socklen_t slen = sizeof(ss);
@@ -338,6 +347,63 @@ void run() {
     event_base_dispatch(base);
 }
 
+
+/**
+ 以守护进程方式启动程序
+
+ @param pname <#pname description#>
+ @param facility <#facility description#>
+ @return <#return value description#>
+ */
+int daemon_init(const char *pname, int facility) {
+    pid_t pid;
+    
+    // 制造子进程，并退出父进程
+    if ((pid = fork())<0) {
+        return -1;
+    }
+    else if (pid) {
+        _exit(EXIT_SUCCESS);
+    }
+    // 脱离控制终端，登录会话和进程组
+    if (setsid()<0) {
+        return -1;
+    }
+    
+    signal(SIGHUP, SIG_IGN);
+    
+    // 再次制造子进程，防止自己成为组进程 长
+    if ((pid = fork()) <0) {
+        return -1;
+    }
+    else if (pid) {
+        _exit(EXIT_SUCCESS);
+    }
+    
+    chdir("/");
+    
+    for ( int i=0;i<64 ; i++) {
+        close(i);
+    }
+    
+    open("/dev/null", O_RDONLY);
+    open("/dev/null", O_RDWR);
+    open("/dev/null", O_RDWR);
+    
+    openlog(pname, LOG_PID, facility);
+    
+    return 0;
+}
+
+static void usage(void) {
+    printf("earth_server " VERSION "\n");
+    printf("-d              run as a daemon\n"
+           "-h                print this help and exit\n"
+           );
+    return;
+}
+
+
 /**
  入口
 
@@ -346,8 +412,30 @@ void run() {
  @return <#return value description#>
  */
 int main(int argc, char **argv) {
+    
     setvbuf(stdout, NULL, _IONBF, 0);
-
+    int c;
+    char *shortopts =
+    "d"
+    "h"
+    ;
+    
+    while (-1 != (c = getopt(argc, argv, shortopts))) {
+        switch (c) {
+            case 'h':
+                usage();
+                exit(EXIT_SUCCESS);
+            case 'd':
+                printf("daemon start ..\n");
+                daemon_init(argv[0],0);
+                break;
+                
+            default:
+                usage();
+                exit(EXIT_SUCCESS);
+        }
+    
+    }
     run();
     return 0;
 }
