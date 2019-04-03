@@ -397,8 +397,9 @@ int daemon_init(const char *pname, int facility) {
 
 static void usage(void) {
     printf("earth_server " VERSION "\n");
-    printf("-d              run as a daemon\n"
-           "-h                print this help and exit\n"
+    printf("-c              run as a console\n"
+           "-d              run as a daemon\n"
+           "-h              print this help and exit\n"
            );
     return;
 }
@@ -415,27 +416,39 @@ int main(int argc, char **argv) {
     
     setvbuf(stdout, NULL, _IONBF, 0);
     int c;
-    char *shortopts =
+    const char *shortopts =
+    "c"
     "d"
     "h"
     ;
+    
+    if (argc ==1) {
+        usage();
+        exit(EXIT_SUCCESS);
+    }
+        
     
     while (-1 != (c = getopt(argc, argv, shortopts))) {
         switch (c) {
             case 'h':
                 usage();
                 exit(EXIT_SUCCESS);
+            case 'c':
+                printf("process start .. \n");
+                run();
+                break;
             case 'd':
                 printf("daemon start ..\n");
                 daemon_init(argv[0],0);
+                run();
                 break;
                 
             default:
-                usage();
-                exit(EXIT_SUCCESS);
+                fprintf(stderr, "Illegal argument \"%c\"\n", c);
+                return 1;
         }
     
     }
-    run();
+    
     return 0;
 }
