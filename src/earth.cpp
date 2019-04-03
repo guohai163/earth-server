@@ -27,7 +27,14 @@ typedef struct token_s {
     size_t length;
 } token_t;
 
-static inline void process_set_command(struct evbuffer *output, token_t *tokens) {
+/**
+ 增加一个坐标信息
+
+ @param output <#output description#>
+ @param tokens <#tokens description#>
+ @return <#return value description#>
+ */
+static inline void process_add_command(struct evbuffer *output, token_t *tokens) {
 
     double lat_degrees, lng_degrees;
     
@@ -151,8 +158,13 @@ static inline void process_delete_command(struct evbuffer *output, token_t *toke
     evbuffer_add(output, "SUCCESS\n", strlen("SUCCESS\n"));
 }
 
+
 /**
- * 通过用户输入参数获得命令各个参数
+ 通过用户输入参数获得命令各个参数
+
+ @param command <#command description#>
+ @param tokens <#tokens description#>
+ @return <#return value description#>
  */
 static size_t get_command(char *command, token_t *tokens) {
     char *s, *e;
@@ -206,9 +218,9 @@ int process_command(struct evbuffer *output, char *command) {
         printf("input get comand %zu\n",ntokens);
         process_get_command(output, tokens);
     }
-    else if ( ntokens==5 && strcmp(tokens[COMMAND_TOKEN].value, "set") == 0) {
+    else if ( ntokens==5 && strcmp(tokens[COMMAND_TOKEN].value, "add") == 0) {
         printf("input set command %zu\n",ntokens);
-        process_set_command(output, tokens);
+        process_add_command(output, tokens);
     }
     else if ( ntokens == 5 && strcmp(tokens[COMMAND_TOKEN].value, "search") == 0) {
         printf("intpu search command \n");
@@ -256,8 +268,13 @@ void errorcb(struct bufferevent *bev, short error, void *ctx) {
     bufferevent_free(bev);
 }
 
-/*
- * 接收新请求
+
+/**
+ 接收新请求
+
+ @param listener socket句柄
+ @param event
+ @param arg
  */
 void do_accept(evutil_socket_t listener, short event, void *arg) {
     printf("wait accept new conn...\n");
@@ -272,7 +289,6 @@ void do_accept(evutil_socket_t listener, short event, void *arg) {
         close(fd);
     }
     else {
-//        struct fd_state *state;
         evutil_make_socket_nonblocking(fd);
         
         struct bufferevent *bev;
@@ -280,12 +296,15 @@ void do_accept(evutil_socket_t listener, short event, void *arg) {
         bufferevent_setcb(bev, readcb, NULL, errorcb, NULL);
         bufferevent_setwatermark(bev, EV_READ, 0, MAX_LINE);
         bufferevent_enable(bev, EV_READ|EV_WRITE);
-//        state = alloc_fd_state(base, fd);
-//        event_add(state->read_event, NULL);
+
     }
 }
 
-void run(void) {
+
+/**
+ 主线程
+ */
+void run() {
     evutil_socket_t listener;
     struct sockaddr_in sin;
     struct event_base *base;
@@ -319,6 +338,13 @@ void run(void) {
     event_base_dispatch(base);
 }
 
+/**
+ 入口
+
+ @param argc <#argc description#>
+ @param argv <#argv description#>
+ @return <#return value description#>
+ */
 int main(int argc, char **argv) {
     setvbuf(stdout, NULL, _IONBF, 0);
 

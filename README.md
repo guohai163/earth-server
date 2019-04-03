@@ -18,10 +18,10 @@ make
 ~~~
 
 # 命令
-* set存储一个坐标点
+* add 存储一个新坐标点
 
 ~~~ html
-    set <key> <Latitude> <Longitude>\r\n
+    add <key> <Latitude> <Longitude>\r\n
 ~~~
 
 * get 搜索某一位置最近N个节点
@@ -30,7 +30,7 @@ make
     get <Latitude> <Longitude> <queryNumber>\r\n
 ~~~
     
-* delete删除一个坐标点
+* delete 删除一个坐标点
 
 ~~~ html
     delete <key> <Latitude> <Longitude>\r\n
@@ -45,3 +45,5 @@ make
 # 参考
 * [Beej's Guide to Network Programming](http://beej.us/guide/bgnet/)
 * [Unix Network Programming](http://www.unpbook.com/)
+* [S2Geometry](http://s2geometry.io/)
+* [libevent](http://libevent.org/)
