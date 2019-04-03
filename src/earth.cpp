@@ -36,6 +36,7 @@ static inline void process_set_command(struct evbuffer *output, token_t *tokens)
         evbuffer_add(output, "bad command\n", strlen("bad command\n"));
         return;
     }
+    PointData pd;
     earthIndex.Add(S2LatLng::FromDegrees(lat_degrees, lng_degrees).ToPoint(),tokens[1].value);
 
     evbuffer_add(output, "SUCCESS\n", strlen("SUCCESS\n"));
@@ -51,9 +52,69 @@ static inline void process_get_command(struct evbuffer *output, token_t *tokens)
     evbuffer_add(output, outLine, strlen(outLine));
 }
 
-// 搜索指定条件的数据
+
+/**
+ 搜索坐标，示例：search 33.462 112.333 1500\r\n
+
+ @param output <#output description#>
+ @param tokens <#tokens description#>
+ @return <#return value description#>
+ */
 static inline void process_search_command(struct evbuffer *output, token_t *tokens) {
+    double lat_degrees, lng_degress;
+    uint32_t resultNum;
     
+    if (!(safe_strtod(tokens[1].value, &lat_degrees)
+          && safe_strtod(tokens[2].value, &lng_degress)
+          && safe_strtoul(tokens[3].value, &resultNum))) {
+        evbuffer_add(output, "bad command\n", strlen("bad command\n"));
+        return;
+    }
+    
+    S2LatLng latlng_query = S2LatLng::FromDegrees(lat_degrees, lng_degress);
+    
+    S2ClosestPointQuery<std::string> query(&earthIndex);
+    S2ClosestPointQuery<std::string>::PointTarget target(latlng_query.ToPoint());
+    query.mutable_options()->set_max_results(resultNum);
+    std::vector<S2ClosestPointQuery<std::string>::Result> result_vec;
+    
+    query.FindClosestPoints(&target, &result_vec);
+    
+    if (result_vec.empty()) {
+        evbuffer_add(output, "not find close points\n", strlen("not find close points\n"));
+        return;
+    }
+
+    
+    for (size_t i = 0;i<result_vec.size();i++) {
+        evbuffer_add(output, &result_vec[i].data(), sizeof(result_vec[i].data()));
+        if (i != result_vec.size()-1) {
+            evbuffer_add(output, " ", sizeof(" "));
+        }
+    }
+    evbuffer_add(output, "\n", sizeof("\n"));
+    
+}
+
+/**
+ 删除指定位置，示例：delete <key> <lat> <lng>\r\n
+
+ @param output <#output description#>
+ @param tokens <#tokens description#>
+ @return <#return value description#>
+ */
+static inline void process_delete_command(struct evbuffer *output, token_t *tokens) {
+    double lat_degrees, lng_degrees;
+    
+    if (!(safe_strtod(tokens[2].value, &lat_degrees)
+          && safe_strtod(tokens[3].value, &lng_degrees))) {
+        evbuffer_add(output, "bad command\n", strlen("bad command\n"));
+        return;
+    }
+    
+    earthIndex.Remove(S2LatLng::FromDegrees(lat_degrees, lng_degrees).ToPoint(), tokens[1].value);
+    
+    evbuffer_add(output, "SUCCESS\n", strlen("SUCCESS\n"));
 }
 
 /**
@@ -114,6 +175,16 @@ int process_command(struct evbuffer *output, char *command) {
     else if ( ntokens==5 && strcmp(tokens[COMMAND_TOKEN].value, "set") == 0) {
         printf("input set command %zu\n",ntokens);
         process_set_command(output, tokens);
+    }
+    else if ( ntokens == 5 && strcmp(tokens[COMMAND_TOKEN].value, "search") == 0) {
+        printf("intpu search command \n");
+        process_search_command(output, tokens);
+    }
+    else if ( ntokens == 5 && strcmp(tokens[COMMAND_TOKEN].value, "delete") == 0) {
+        process_delete_command(output, tokens);
+    }
+    else {
+        evbuffer_add(output, "bad command\n", sizeof("bad command\n"));
     }
     return 0;
 }
