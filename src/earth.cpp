@@ -43,24 +43,15 @@ static inline void process_set_command(struct evbuffer *output, token_t *tokens)
     
 }
 
-static inline void process_get_command(struct evbuffer *output, token_t *tokens) {
-    double lat_degrees, lng_degrees;
-    int points = earthIndex.num_points();
-    char outLine[MAX_LINE];
-    sprintf(outLine, "%d \n",points);
-    
-    evbuffer_add(output, outLine, strlen(outLine));
-}
-
 
 /**
- 搜索坐标，示例：search 33.462 112.333 1500\r\n
-
+ 搜索距离坐标最近的N个结果，示例：search 33.462 112.333 10\r\n
+ 
  @param output <#output description#>
  @param tokens <#tokens description#>
  @return <#return value description#>
  */
-static inline void process_search_command(struct evbuffer *output, token_t *tokens) {
+static inline void process_get_command(struct evbuffer *output, token_t *tokens) {
     double lat_degrees, lng_degress;
     uint32_t resultNum;
     
@@ -84,16 +75,59 @@ static inline void process_search_command(struct evbuffer *output, token_t *toke
         evbuffer_add(output, "not find close points\n", strlen("not find close points\n"));
         return;
     }
-
+    
     
     for (size_t i = 0;i<result_vec.size();i++) {
-        evbuffer_add(output, &result_vec[i].data(), sizeof(result_vec[i].data()));
+//        evbuffer_add(output, result_vec[i].data(), sizeof(result_vec[i].data()));
         if (i != result_vec.size()-1) {
             evbuffer_add(output, " ", sizeof(" "));
         }
     }
     evbuffer_add(output, "\n", sizeof("\n"));
+}
+
+
+/**
+ 搜索坐标N米范围内的结果，示例：search 33.462 112.333 1500\r\n
+
+ @param output <#output description#>
+ @param tokens <#tokens description#>
+ @return <#return value description#>
+ */
+static inline void process_search_command(struct evbuffer *output, token_t *tokens) {
+    double lat_degrees, lng_degress;
+    uint32_t resultMeter;
     
+    if (!(safe_strtod(tokens[1].value, &lat_degrees)
+          && safe_strtod(tokens[2].value, &lng_degress)
+          && safe_strtoul(tokens[3].value, &resultMeter))) {
+        evbuffer_add(output, "bad command\n", strlen("bad command\n"));
+        return;
+    }
+    
+    S2LatLng latlng_query = S2LatLng::FromDegrees(lat_degrees, lng_degress);
+    
+    S2ClosestPointQuery<std::string> query(&earthIndex);
+    S2ClosestPointQuery<std::string>::PointTarget target(latlng_query.ToPoint());
+    query.mutable_options()->set_max_distance(S1Angle::Radians(S2Earth::KmToRadians(resultMeter)));
+    std::vector<S2ClosestPointQuery<std::string>::Result> result_vec;
+    
+    query.FindClosestPoints(&target, &result_vec);
+    
+    if (result_vec.empty()) {
+        evbuffer_add(output, "not find close points\n", strlen("not find close points\n"));
+        return;
+    }
+    
+    
+    for (size_t i = 0;i<result_vec.size();i++) {
+
+        evbuffer_add(output,result_vec[i].data().c_str(), strlen(result_vec[i].data().c_str()));
+        if (i != result_vec.size()-1) {
+            evbuffer_add(output, " ", strlen(" "));
+        }
+    }
+    evbuffer_add(output, "\n", strlen("\n"));
 }
 
 /**
@@ -167,7 +201,7 @@ int process_command(struct evbuffer *output, char *command) {
     
     printf("command is:%s, command length:%zu\n",tokens[0].value,ntokens);
     
-    if ( ntokens == 3 && strcmp(tokens[COMMAND_TOKEN].value, "get") == 0) {
+    if ( ntokens == 5 && strcmp(tokens[COMMAND_TOKEN].value, "get") == 0) {
         
         printf("input get comand %zu\n",ntokens);
         process_get_command(output, tokens);

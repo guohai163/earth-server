@@ -23,17 +23,23 @@ make
 ~~~ html
     set <key> <Latitude> <Longitude>\r\n
 ~~~
-    
-* search搜索某一位置最近N个节点
+
+* get 搜索某一位置最近N个节点
 
 ~~~ html
-    search <Latitude> <Longitude> <queryNumber>\r\n
+    get <Latitude> <Longitude> <queryNumber>\r\n
 ~~~
     
 * delete删除一个坐标点
 
 ~~~ html
     delete <key> <Latitude> <Longitude>\r\n
+~~~
+
+* search 搜索某一位置周边指定秘书的结果集
+
+~~~ html
+    search <Latitude> <Longitude> <queryMeter>\r\n
 ~~~
 
 # 参考
