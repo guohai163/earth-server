@@ -78,7 +78,7 @@ static inline void process_get_command(struct evbuffer *output, token_t *tokens)
     
     
     for (size_t i = 0;i<result_vec.size();i++) {
-//        evbuffer_add(output, result_vec[i].data(), sizeof(result_vec[i].data()));
+        evbuffer_add(output, result_vec[i].data().c_str(), sizeof(result_vec[i].data().c_str()));
         if (i != result_vec.size()-1) {
             evbuffer_add(output, " ", sizeof(" "));
         }
