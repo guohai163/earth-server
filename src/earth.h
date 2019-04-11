@@ -46,5 +46,10 @@
 void do_read(evutil_socket_t fd, short events, void *arg);
 void do_write(evutil_socket_t fd, short events, void *arg);
 
+struct settings {
+    int port;
+    int run_mode;
+};
+
 
 #endif /* earth_h */

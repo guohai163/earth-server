@@ -18,6 +18,13 @@ make
 ./earth-library
 ~~~
 
+# 启动
+
+* `-p <num>` 指定监听的TCP端口，如果不指定会使用默认端口40000
+* `-c` 使用控制台方式启动
+* `-d` 使用守护进程方式启动
+* `-h` 帮助
+
 # 命令
 * add 存储一个新坐标点
 
@@ -42,6 +49,11 @@ make
 ~~~ html
     search <Latitude> <Longitude> <queryMeter>\r\n
 ~~~
+
+# FAQ
+
+* 在MacOS上启动报 `[warn] kq_init: detected broken kqueue; not using.: Undefined error: 0`
+    * 请先执行 `export EVENT_NOKQUEUE=1`
 
 # 参考
 * [Beej's Guide to Network Programming](http://beej.us/guide/bgnet/)

@@ -16,10 +16,16 @@
 #define PROCESS_NAME "earth_server"
 #define VERSION "1.0a"
 
+//定义会用控制台守护进程方式
+#define CONSOLE_RUN 1
+#define DEMON_RUN 2
+
 
 // 全局变量，存储坐标
 using Index = S2PointIndex<string>;
 using PointData = Index::PointData;
+
+struct settings settings;
 
 
 Index earthIndex;
@@ -169,6 +175,10 @@ static inline void process_delete_command(struct evbuffer *output, token_t *toke
     evbuffer_add(output, "SUCCESS\n", strlen("SUCCESS\n"));
 }
 
+
+static void process_save_command(struct evbuffer *output, token_t *tokens) {
+    
+}
 
 /**
  通过用户输入参数获得命令各个参数
@@ -324,7 +334,7 @@ void run() {
         return;
     sin.sin_family = AF_INET;
     sin.sin_addr.s_addr = 0;
-    sin.sin_port = htons(4000);
+    sin.sin_port = htons(settings.port);
     
     listener = socket(AF_INET, SOCK_STREAM, 0);
     evutil_make_socket_nonblocking(listener);
@@ -397,7 +407,8 @@ int daemon_init(const char *pname, int facility) {
 
 static void usage(void) {
     printf("earth_server " VERSION "\n");
-    printf("-c              run as a console\n"
+    printf("-p <num>        TCP port to listen on (default:40000)\n"
+           "-c              run as a console\n"
            "-d              run as a daemon\n"
            "-h              print this help and exit\n"
            );
@@ -416,7 +427,10 @@ int main(int argc, char **argv) {
     
     setvbuf(stdout, NULL, _IONBF, 0);
     int c;
+    settings.port = 40000;
+    settings.run_mode = 0;
     const char *shortopts =
+    "p:"
     "c"
     "d"
     "h"
@@ -430,17 +444,17 @@ int main(int argc, char **argv) {
     
     while (-1 != (c = getopt(argc, argv, shortopts))) {
         switch (c) {
+            case 'p':
+                settings.port = atoi(optarg);
+                break;
             case 'h':
                 usage();
                 exit(EXIT_SUCCESS);
             case 'c':
-                printf("process start .. \n");
-                run();
+                settings.run_mode = CONSOLE_RUN;
                 break;
             case 'd':
-                printf("daemon start ..\n");
-                daemon_init(argv[0],0);
-                run();
+                settings.run_mode = DEMON_RUN;
                 break;
                 
             default:
@@ -448,6 +462,14 @@ int main(int argc, char **argv) {
                 return 1;
         }
     
+    }
+    if ( CONSOLE_RUN == settings.run_mode ) {
+        printf("process start listen port:%d .. \n", settings.port);
+        run();
+    } else if (DEMON_RUN == settings.run_mode ) {
+        printf("daemon start listen port:%d ..\n", settings.port);
+        daemon_init(argv[0],0);
+        run();
     }
     
     return 0;

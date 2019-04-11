@@ -32,4 +32,7 @@ bool safe_strtod(const char *str, double *out);
  @return <#return value description#>
  */
 bool safe_strtoul(const char *str, uint32_t *out);
+
+
+
 #endif /* util_hpp */
