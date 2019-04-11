@@ -9,7 +9,7 @@ earth-server是一个基于谷歌S2类库实现的，地球经纬度算法数据
 # 编译
 
 ~~~
-git clone https://github.com/guohai163/earth-library.git
+git clone https://github.com/guohai163/earth-server.git
 cd earth-library
 mkdir build
 cd build
