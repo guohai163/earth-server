@@ -226,13 +226,29 @@ static size_t get_command(char *command, token_t *tokens) {
     return ntokens;
 }
 
-int process_command(struct evbuffer *output, char *command) {
+void rn_check(char *p) {
+    char *e;
+    e= p;
+    while (e) {
+        if(*e == '\r' || *e == '\n') {
+            *e = '\0';
+            break;
+        }
+        e++;
+    }
+}
+
+int process_command(struct bufferevent *bev, char *command) {
+    struct evbuffer *output;
     token_t tokens[MAX_TOKENS];
     size_t ntokens;
-    
+    output = bufferevent_get_output(bev);
+    rn_check(command);
     ntokens = get_command(command, tokens);
     
-    syslog(LOG_INFO, "command is:%s, command length:%zu\n",tokens[0].value,ntokens);
+    syslog(LOG_INFO, "command is:%s, command length:%zu\n",tokens[COMMAND_TOKEN].value,ntokens);
+    
+    printf("command is:%s,%s, command length:%zu\n",tokens[0].value,tokens[1].value,ntokens);
     
     if ( ntokens == 5 && strcmp(tokens[COMMAND_TOKEN].value, "get") == 0) {
         
@@ -250,35 +266,29 @@ int process_command(struct evbuffer *output, char *command) {
     else if ( ntokens == 5 && strcmp(tokens[COMMAND_TOKEN].value, "delete") == 0) {
         process_delete_command(output, tokens);
     }
+    else if ( ntokens == 2 && strcmp(tokens[COMMAND_TOKEN].value, "exit") == 0 ) {
+        bufferevent_free(bev);
+        
+    }
     else {
         evbuffer_add(output, "bad command\n", sizeof("bad command\n"));
     }
     return 0;
 }
 
-struct fd_state {
-    char buffer[MAX_LINE];
-    size_t buffer_used;
-    
-    size_t n_written;
-    size_t write_upto;
-    
-    struct event *read_event;
-    struct event *write_event;
-};
 
 
 void readcb(struct bufferevent *bev, void *ctx) {
-    struct evbuffer *input, *output;
+    struct evbuffer *input;
     char *line;
     size_t n;
     
     input = bufferevent_get_input(bev);
-    output = bufferevent_get_output(bev);
+    
     
     while ((line = evbuffer_readln(input, &n, EVBUFFER_EOL_LF))) {
-
-        process_command(output, line);
+        printf("n is:%zu", n);
+        process_command(bev, line);
         free(line);
     }
 }
@@ -470,6 +480,8 @@ int main(int argc, char **argv) {
         printf("daemon start listen port:%d ..\n", settings.port);
         daemon_init(argv[0],0);
         run();
+    } else {
+        printf("bad command,exit!");
     }
     
     return 0;

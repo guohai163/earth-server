@@ -29,25 +29,31 @@ make
 * add 存储一个新坐标点
 
 ~~~ html
-    add <key> <Latitude> <Longitude>\r\n
+    add <key> <Latitude> <Longitude>\n
 ~~~
 
 * get 搜索某一位置最近N个节点
 
 ~~~ html
-    get <Latitude> <Longitude> <queryNumber>\r\n
+    get <Latitude> <Longitude> <queryNumber>\n
 ~~~
     
 * delete 删除一个坐标点
 
 ~~~ html
-    delete <key> <Latitude> <Longitude>\r\n
+    delete <key> <Latitude> <Longitude>\n
 ~~~
 
 * search 搜索某一位置周边指定秘书的结果集
 
 ~~~ html
-    search <Latitude> <Longitude> <queryMeter>\r\n
+    search <Latitude> <Longitude> <queryMeter>\n
+~~~
+
+* exit 退出会话
+
+~~~ html
+    exit\n
 ~~~
 
 # FAQ
