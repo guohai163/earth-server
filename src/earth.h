@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <syslog.h>
+#include <signal.h>
 
 #include "s2/base/commandlineflags.h"
 #include "s2/s2earth.h"

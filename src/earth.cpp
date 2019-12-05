@@ -280,6 +280,7 @@ int process_command(struct bufferevent *bev, char *command) {
 
 void readcb(struct bufferevent *bev, void *ctx) {
     struct evbuffer *input;
+    struct evbuffer *output;
     char *line;
     size_t n;
     
@@ -290,6 +291,8 @@ void readcb(struct bufferevent *bev, void *ctx) {
         printf("n is:%zu", n);
         process_command(bev, line);
         free(line);
+        // output = bufferevent_get_output(bev);
+        // evbuffer_add(output, "bad command\n", sizeof("bad command\n"));
     }
 }
 

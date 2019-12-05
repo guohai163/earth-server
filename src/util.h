@@ -13,7 +13,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <string>
-
+#include <cstring> 
 
 /**
  字符串转换为双精度浮点数
