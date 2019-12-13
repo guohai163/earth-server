@@ -18,4 +18,5 @@ EXPOSE 40000
 
 RUN mkdir -p /opt/earth-server/build && \
     cd /opt/earth-server/build && cmake .. && \
-    make && ls -l && ./earth_server
+    make && ls -l && ./earth_server && \
+    cp ./earth_server /usr/local/bin/earth_server
